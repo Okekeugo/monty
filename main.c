@@ -1,48 +1,78 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include "monty.h"
-globals_t global;
+
 /**
- * main - main function
- * @argc: number of the arguments
- * @argv: argument
- * Return: Always 0
+ * error_usage - prints usage message and exits
+ *
+ * Return: nothing
+ */
+void error_usage(void)
+{
+	fprintf(stderr, "USAGE: monty file\n");
+	exit(EXIT_FAILURE);
+}
+
+/**
+ * file_error - prints file error message and exits
+ * @argv: argv given by manin
+ *
+ * Return: nothing
+ */
+void file_error(char *argv)
+{
+	fprintf(stderr, "Error: Can't open file %s\n", argv);
+	exit(EXIT_FAILURE);
+}
+
+int status = 0;
+/**
+ * main - entry point
+ * @argv: list of arguments passed to our program
+ * @argc: ammount of args
+ *
+ * Return: nothing
  */
 int main(int argc, char **argv)
 {
+	FILE *file;
+	size_t buf_len = 0;
+	char *buffer = NULL;
+	char *str = NULL;
 	stack_t *stack = NULL;
-	size_t numbytes = 0;
-	int bytesr = 0;
-	unsigned int con = 1;
+	unsigned int line_cnt = 1;
 
-	global.flag = 1;
-	global.line = NULL;
+	global.data_struct = 1;
 	if (argc != 2)
+		error_usage();
+
+	file = fopen(argv[1], "r");
+
+	if (!file)
+		file_error(argv[1]);
+
+	while (getline(&buffer, &buf_len, file) != -1)
 	{
-		fputs("USAGE: monty file\n", stderr);
-		exit(EXIT_FAILURE);
-	}
-	global.fil = fopen(argv[1], "r");
-	if (global.fil == NULL)
-	{
-		dprintf (2, "Error: Can't open file %s\n", argv[1]);
-		exit(EXIT_FAILURE);
-	}
-	while ((bytesr = getline(&global.line, &numbytes, global.fil)) != EOF)
-	{
-		delete_jump(global.line);
-		if (global.line[0] != 35)
+		if (status)
+			break;
+		if (*buffer == '\n')
 		{
-			global.token = strtok(global.line, " \t\n");
-			global.opco = global.token;
-			if (global.opco != NULL)
-			{
-				global.token = strtok(NULL, " \t\n");
-				func(global.opco)(&stack, con);
-			}
-			con++;
+			line_cnt++;
+			continue;
 		}
+		str = strtok(buffer, " \t\n");
+		if (!str || *str == '#')
+		{
+			line_cnt++;
+			continue;
+		}
+		global.argument = strtok(NULL, " \t\n");
+		opcode(&stack, str, line_cnt);
+		line_cnt++;
 	}
-	free_l(&stack);
-	free(global.line);
-	fclose(global.fil);
-	return (0);
+	free(buffer);
+	free_stack(stack);
+	fclose(file);
+	exit(status);
 }
